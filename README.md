@@ -1,8 +1,8 @@
-# Liquidity Flight Radar
+# Flight Radar
 
 Institutional-grade, real-time liquidity-flight intelligence for Solana, built on [Solami](https://solami.dev).
 
-> **Built for the Superteam Earn Bounty:** *"Build something live on Solana data (Solami)"*
+> **Built for the future:** *"Build something live on Solana data (Solami)"*
 
 ## Demo
 
