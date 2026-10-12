@@ -4,10 +4,6 @@ Institutional-grade, real-time liquidity-flight intelligence for Solana, built o
 
 Radar continuously monitors decoded Solana DEX events and on-chain telemetry, scoring every active token with an explainable **Liquidity Flight Score (0–100)**. It correlates rapid LP withdrawals, whale exit concentration, and cross-chain bridge flows (Wormhole & DefiLlama) to alert traders and LPs before pools drain.
 
-> **Built for the Superteam Earn Bounty:** *"Build something live on Solana data (Solami)"*
-
-- **Live Demo:** `TODO: Add your deployed URL` (e.g., Railway / Render / VPS)
-- **Demo Video (2–3 min):** `TODO: Add your Loom or YouTube video link`
 
 ---
 
