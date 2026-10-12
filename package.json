@@ -1,0 +1,32 @@
+{
+  "name": "solana-liquidity-flight-radar",
+  "version": "0.1.0",
+  "description": "Real-time Solana liquidity-flight intelligence built on Solami (Blur, Yellowstone gRPC, Mirage, RPC, Webhooks).",
+  "license": "MIT",
+  "type": "module",
+  "private": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch apps/server/src/index.ts",
+    "start": "tsx apps/server/src/index.ts",
+    "simulate": "MODE=simulate tsx apps/server/src/index.ts",
+    "check": "node scripts/check-env.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@triton-one/yellowstone-grpc": "^9.0.0",
+    "bs58": "^6.0.0",
+    "dotenv": "^18.0.7",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}

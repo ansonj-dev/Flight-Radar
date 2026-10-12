@@ -1,0 +1,2594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Liquidity Flight Radar · Solana DEX Intelligence</title>
+<meta name="description" content="Institutional-grade Solana DEX liquidity flight radar. Real-time monitoring of capital flight, LP drains, sell pressure, and cross-chain bridge flows powered by Solami.">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-base: #07090e;
+    --bg-surface: #0c1019;
+    --bg-surface-elevated: #121826;
+    --bg-surface-hover: #182033;
+    --bg-glass: rgba(12, 16, 25, 0.78);
+    
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-default: rgba(255, 255, 255, 0.1);
+    --border-highlight: rgba(153, 69, 255, 0.35);
+    
+    --text-primary: #f3f6fc;
+    --text-secondary: #94a3b8;
+    --text-muted: #5e6c84;
+    
+    --sol-purple: #9945FF;
+    --sol-green: #14F195;
+    --sol-cyan: #00f2fe;
+    --sol-pink: #ff3399;
+    
+    --danger: #ff3b57;
+    --danger-bg: rgba(255, 59, 87, 0.12);
+    --danger-border: rgba(255, 59, 87, 0.3);
+    
+    --warning: #f59e0b;
+    --warning-bg: rgba(245, 158, 11, 0.12);
+    --warning-border: rgba(245, 158, 11, 0.3);
+    
+    --success: #10b981;
+    --success-bg: rgba(16, 185, 129, 0.12);
+    --success-border: rgba(16, 185, 129, 0.3);
+    
+    --info: #3b82f6;
+    --info-bg: rgba(59, 130, 246, 0.12);
+    
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+    
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-glow: 0 0 24px rgba(153, 69, 255, 0.15);
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    height: 100%;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-base); }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+  /* App Container Layout */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* Header & Navigation */
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 20px;
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    flex-shrink: 0;
+  }
+
+  .brand-logo-mark {
+    width: 38px;
+    height: 38px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(153, 69, 255, 0.2), rgba(20, 241, 149, 0.15));
+    border: 1px solid rgba(153, 69, 255, 0.4);
+    box-shadow: 0 0 16px rgba(153, 69, 255, 0.2);
+  }
+
+  .radar-sweep-ring {
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 1px dashed rgba(20, 241, 149, 0.4);
+    animation: rotateRing 14s linear infinite;
+  }
+
+  @keyframes rotateRing {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .brand-titles {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand-name {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .brand-name-gradient {
+    background: linear-gradient(110deg, #ffffff 30%, var(--sol-green) 70%, var(--sol-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .brand-sub {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .badge-solami {
+    background: rgba(153, 69, 255, 0.16);
+    color: var(--sol-purple);
+    border: 1px solid rgba(153, 69, 255, 0.35);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+
+  /* Navigation Tabs */
+  .nav-tabs {
+    display: flex;
+    align-items: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 3px;
+    border-radius: var(--radius-md);
+    gap: 2px;
+  }
+
+  .nav-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.18s ease;
+  }
+
+  .nav-tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-elevated);
+  }
+
+  .nav-tab-btn.active {
+    color: #ffffff;
+    background: var(--bg-surface-elevated);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-default);
+  }
+
+  .nav-badge-pill {
+    padding: 1px 6px;
+    font-size: 10px;
+    border-radius: var(--radius-full);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    background: var(--bg-surface-hover);
+    color: var(--text-secondary);
+  }
+
+  .nav-badge-pill.danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+  }
+
+  /* Header System Telemetry Bar */
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+  }
+
+  .status-badge.live {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: var(--sol-green);
+  }
+
+  .status-badge.sim {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: var(--warning);
+  }
+
+  .status-dot-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    position: relative;
+  }
+
+  .status-dot-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    opacity: 0.7;
+    animation: pingDot 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes pingDot {
+    75%, 100% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+  }
+
+  .slot-counter {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .slot-counter strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .icon-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .icon-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+    border-color: var(--border-default);
+  }
+
+  .mobile-menu-toggle {
+    display: none;
+  }
+
+  /* Simulation Banner */
+  .simulation-banner {
+    display: none;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.08));
+    border-bottom: 1px solid var(--warning-border);
+    padding: 6px 20px;
+    font-size: 11px;
+    color: #fbbf24;
+    text-align: center;
+    font-weight: 500;
+  }
+  .simulation-banner.show { display: block; }
+
+  /* Main Viewport Workspace */
+  .workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    max-width: 1720px;
+    width: 100%;
+    margin: 0 auto;
+    gap: 20px;
+  }
+
+  /* Metrics Ribbon / KPI Bar */
+  .metrics-ribbon {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+
+  .metric-tile {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .metric-tile:hover {
+    border-color: var(--border-default);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .metric-tile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: transparent;
+    transition: background 0.2s;
+  }
+
+  .metric-tile.purple-accent::before { background: linear-gradient(90deg, var(--sol-purple), transparent); }
+  .metric-tile.green-accent::before { background: linear-gradient(90deg, var(--sol-green), transparent); }
+  .metric-tile.cyan-accent::before { background: linear-gradient(90deg, var(--sol-cyan), transparent); }
+  .metric-tile.red-accent::before { background: linear-gradient(90deg, var(--danger), transparent); }
+
+  .metric-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metric-icon-wrap {
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+  }
+
+  .metric-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+  }
+
+  .metric-footer {
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+  }
+
+  .metric-trend {
+    font-weight: 600;
+  }
+  .trend-up { color: var(--sol-green); }
+  .trend-down { color: var(--danger); }
+  .trend-neutral { color: var(--text-muted); }
+
+  /* Main Cockpit Layout: Left Data Grid + Right Activity Panel */
+  .cockpit-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 20px;
+    align-items: start;
+    transition: grid-template-columns 0.25s ease;
+  }
+
+  .cockpit-layout.sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cockpit-layout.sidebar-collapsed .cockpit-sidebar {
+    display: none;
+  }
+
+  .cockpit-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  /* Section Containers */
+  .card-container {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  /* Filtering & Search Toolbar */
+  .toolbar {
+    padding: 14px 18px;
+    background: var(--bg-surface-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .search-box-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 220px;
+    max-width: 360px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 8px 12px 8px 34px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.18s;
+  }
+
+  .search-input:focus {
+    border-color: var(--border-highlight);
+    box-shadow: 0 0 0 2px rgba(153, 69, 255, 0.15);
+  }
+
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .filter-pill-btn {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 5px 11px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    user-select: none;
+  }
+
+  .filter-pill-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+    border-color: var(--border-default);
+  }
+
+  .filter-pill-btn.active {
+    background: rgba(153, 69, 255, 0.16);
+    border-color: rgba(153, 69, 255, 0.4);
+    color: #ffffff;
+  }
+
+  .filter-pill-btn.critical-filter.active {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+    color: var(--danger);
+  }
+
+  .filter-pill-btn.drain-filter.active {
+    background: rgba(255, 59, 87, 0.15);
+    border-color: rgba(255, 59, 87, 0.4);
+    color: #ff7088;
+  }
+
+  .filter-pill-btn.inflow-filter.active {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+    color: var(--sol-green);
+  }
+
+  .toolbar-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* Flight Radar Token Table */
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .data-table th {
+    background: var(--bg-surface);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    user-select: none;
+  }
+
+  .data-table th.text-right,
+  .data-table td.text-right {
+    text-align: right;
+  }
+
+  .data-table th.text-center,
+  .data-table td.text-center {
+    text-align: center;
+  }
+
+  .data-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    vertical-align: middle;
+  }
+
+  .data-table tr.token-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .data-table tr.token-row:hover {
+    background: var(--bg-surface-elevated);
+  }
+
+  .data-table tr.token-row.expanded {
+    background: var(--bg-surface-elevated);
+  }
+
+  /* Sticky Token Identity Column for Smooth Horizontal Panning */
+  .data-table th:first-child,
+  .data-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--bg-surface);
+    z-index: 3;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
+  }
+
+  .data-table tr.token-row:hover td:first-child,
+  .data-table tr.token-row.expanded td:first-child {
+    background: var(--bg-surface-elevated);
+  }
+
+  .data-table thead th:first-child {
+    z-index: 4;
+  }
+
+  /* Token Identity Cell */
+  .token-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 170px;
+  }
+
+  .token-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .token-avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+    z-index: 1;
+  }
+
+  .token-avatar-fallback {
+    position: relative;
+    z-index: 0;
+  }
+
+  .token-avatar.high-risk {
+    background: linear-gradient(135deg, rgba(255, 59, 87, 0.3), #1e1017);
+    border-color: var(--danger-border);
+    color: var(--danger);
+  }
+
+  .token-name-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .token-symbol-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .token-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .token-full-name {
+    color: var(--text-secondary);
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+  }
+
+  .token-symbol-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+
+  .token-mint-hash {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Flight Score Gauge Bar */
+  .score-gauge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 120px;
+  }
+
+  .score-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-base);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  .score-bar-fill.critical { background: linear-gradient(90deg, #ff7088, var(--danger)); box-shadow: 0 0 8px rgba(255, 59, 87, 0.6); }
+  .score-bar-fill.high { background: linear-gradient(90deg, #fbbf24, var(--warning)); }
+  .score-bar-fill.elevated, .score-bar-fill.medium { background: linear-gradient(90deg, #818cf8, var(--info)); }
+  .score-bar-fill.low { background: linear-gradient(90deg, #34d399, var(--success)); }
+
+  .score-pill-number {
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 12px;
+    min-width: 30px;
+    text-align: right;
+  }
+
+  .score-pill-number.critical { color: var(--danger); }
+  .score-pill-number.high { color: var(--warning); }
+  .score-pill-number.elevated, .score-pill-number.medium { color: var(--info); }
+  .score-pill-number.low { color: var(--success); }
+
+  /* Flow Badges */
+  .flow-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .flow-badge.outflow {
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    color: var(--danger);
+  }
+
+  .flow-badge.inflow {
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    color: var(--sol-green);
+  }
+
+  .flow-badge.rotation {
+    background: rgba(153, 69, 255, 0.15);
+    border: 1px solid rgba(153, 69, 255, 0.35);
+    color: #c084fc;
+  }
+
+  .flow-badge.neutral {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+  }
+
+  /* Numerics */
+  .mono-val {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .val-neg { color: var(--danger); font-family: var(--font-mono); font-weight: 600; }
+  .val-pos { color: var(--sol-green); font-family: var(--font-mono); font-weight: 600; }
+
+  /* Detailed Drawer Row inside Table */
+  tr.detail-expansion-row td {
+    padding: 0;
+    background: rgba(15, 20, 32, 0.95);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .detail-card-expansion {
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .detail-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .detail-box-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .signals-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .signal-item {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .signal-pts-badge {
+    background: rgba(255, 59, 87, 0.16);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .actions-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .action-badge-item {
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+  }
+
+  .quick-links-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .ext-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  .ext-link-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface-hover);
+    border-color: var(--border-default);
+  }
+
+  /* Right Side Cockpit Column: Alerts & Live Feed */
+  .cockpit-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel-segmented-header {
+    padding: 10px 14px;
+    background: var(--bg-surface-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-base);
+    padding: 2px;
+    border-radius: var(--radius-md);
+  }
+
+  .panel-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .panel-tab-btn.active {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+  }
+
+  .panel-content-scroll {
+    max-height: 580px;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Alert Card Item */
+  .alert-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    border-left: 3px solid var(--border-default);
+    transition: transform 0.15s, border-color 0.15s;
+  }
+
+  .alert-card:hover {
+    transform: translateX(2px);
+    border-color: var(--border-default);
+  }
+
+  .alert-card.critical { border-left-color: var(--danger); background: linear-gradient(90deg, rgba(255, 59, 87, 0.08), var(--bg-surface-elevated) 40%); }
+  .alert-card.high { border-left-color: var(--warning); background: linear-gradient(90deg, rgba(245, 158, 11, 0.08), var(--bg-surface-elevated) 40%); }
+  .alert-card.medium { border-left-color: var(--info); }
+  .alert-card.low { border-left-color: var(--success); }
+
+  .alert-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .alert-title {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+
+  .alert-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .alert-body-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  .alert-action-hint {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    border-top: 1px dashed var(--border-subtle);
+    padding-top: 5px;
+    margin-top: 2px;
+  }
+
+  /* Live Feed Item */
+  .feed-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 8px 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11.5px;
+  }
+
+  .feed-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .feed-pill {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
+
+  .feed-pill.buy { background: var(--success-bg); color: var(--sol-green); border: 1px solid var(--success-border); }
+  .feed-pill.sell { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+  .feed-pill.add { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+  .feed-pill.remove { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+  .feed-pill.launch { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+  .feed-token-name {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .feed-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .feed-usd {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .feed-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* Health & Telemetry View */
+  .view-tab-content {
+    display: none;
+  }
+
+  .view-tab-content.active {
+    display: block;
+  }
+
+  .health-cockpit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .health-node-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .health-node-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .health-node-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+
+  .health-state-badge {
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+
+  .health-state-badge.live { background: var(--success-bg); color: var(--sol-green); border: 1px solid var(--success-border); }
+  .health-state-badge.connecting { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+  .health-state-badge.error { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+  .health-state-badge.disabled { background: var(--bg-base); color: var(--text-muted); border: 1px solid var(--border-subtle); }
+
+  .health-telemetry-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: var(--bg-base);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .health-metric-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .health-metric-col span:first-child {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .health-node-detail-txt {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    word-break: break-all;
+  }
+
+  /* Program Activity Distribution Bars */
+  .program-activity-box {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .prog-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .prog-name {
+    width: 140px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+  }
+
+  .prog-track {
+    flex: 1;
+    height: 7px;
+    background: var(--bg-base);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .prog-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--sol-purple), var(--sol-green));
+    transition: width 0.4s ease;
+  }
+
+  .prog-val {
+    width: 70px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  /* Footer */
+  .app-footer {
+    border-top: 1px solid var(--border-subtle);
+    padding: 14px 20px;
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .footer-links {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .footer-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .footer-link:hover {
+    color: var(--text-primary);
+  }
+
+  /* Empty State */
+  .empty-state-box {
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    font-size: 28px;
+    opacity: 0.6;
+  }
+
+  /* Mobile Slide-Out Drawer for Filters & Navigation */
+  .mobile-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+  }
+
+  .mobile-drawer {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 85vw;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-default);
+    z-index: 101;
+    padding: 20px;
+    flex-direction: column;
+    gap: 18px;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+
+  .mobile-drawer.open {
+    transform: translateX(0);
+  }
+
+  .mobile-drawer-backdrop.open {
+    display: block;
+  }
+
+  /* Responsive Breakpoints */
+  /* Laptop / Desktop Sub-1440px (e.g. 1366x768 screens) */
+  @media (max-width: 1440px) {
+    .metrics-ribbon {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .cockpit-layout {
+      grid-template-columns: 1fr;
+    }
+    .cockpit-sidebar {
+      display: none;
+    }
+    .cockpit-layout.sidebar-active {
+      grid-template-columns: minmax(0, 1fr) 340px;
+    }
+    .cockpit-layout.sidebar-active .cockpit-sidebar {
+      display: flex;
+    }
+  }
+
+  /* Tablet (max 1024px) */
+  @media (max-width: 1024px) {
+    .app-header {
+      padding: 0 16px;
+    }
+    .metrics-ribbon {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .cockpit-layout {
+      grid-template-columns: 1fr !important;
+    }
+    .cockpit-sidebar {
+      display: none !important;
+    }
+    .detail-card-expansion {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Mobile Devices (max 768px) */
+  @media (max-width: 768px) {
+    .workspace {
+      padding: 10px;
+      gap: 12px;
+    }
+    .app-header {
+      height: 54px;
+      padding: 0 12px;
+    }
+    .nav-tabs {
+      display: none; /* Accessible in mobile drawer */
+    }
+    .slot-counter {
+      display: none;
+    }
+    .mobile-menu-toggle {
+      display: inline-flex;
+    }
+    .mobile-drawer {
+      display: flex;
+    }
+    .metrics-ribbon {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .metric-tile {
+      padding: 10px;
+    }
+    .metric-value {
+      font-size: 16px;
+    }
+    .toolbar {
+      padding: 10px;
+      gap: 8px;
+    }
+    .search-box-wrap {
+      max-width: 100%;
+      flex-basis: 100%;
+    }
+    .filter-group {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+    .filter-pill-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .data-table th, .data-table td {
+      padding: 10px 10px;
+      font-size: 11.5px;
+    }
+    .token-identity {
+      min-width: 135px;
+    }
+    .detail-card-expansion {
+      padding: 12px;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .quick-links-group {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* Small Mobile (max 480px) */
+  @media (max-width: 480px) {
+    .metrics-ribbon {
+      grid-template-columns: 1fr 1fr;
+    }
+    .metric-footer {
+      font-size: 9.5px;
+    }
+    .brand-sub {
+      display: none;
+    }
+  }
+
+  /* Pulse animation on table live updates */
+  @keyframes highlightRow {
+    0% { background-color: rgba(153, 69, 255, 0.18); }
+    100% { background-color: transparent; }
+  }
+  .row-flash {
+    animation: highlightRow 1s ease-out;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- Simulation Notice Bar -->
+  <div class="simulation-banner" id="simBanner">
+    ⚠️ <strong>SIMULATION MODE ACTIVE:</strong> Generating synthetic Solana DEX events for architecture testing. Live mainnet telemetry is offline.
+  </div>
+
+  <!-- Main Institutional Navigation -->
+  <header class="app-header">
+    <a href="#" class="brand-group" id="logoReload">
+      <div class="brand-logo-mark">
+        <div class="radar-sweep-ring"></div>
+        <!-- Vector Radar Sweeper Logo -->
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" stroke="url(#logoGrad)" stroke-width="2" />
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="#14F195" stroke-width="2.5" />
+          <path d="M12 12l5-5" stroke="#14F195" stroke-width="2" />
+          <circle cx="12" cy="12" r="3" fill="#9945FF" />
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#9945FF"/>
+              <stop offset="1" stop-color="#14F195"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-titles">
+        <div class="brand-name">
+          <span class="brand-name-gradient">FLIGHT RADAR</span>
+        </div>
+        <div class="brand-sub">
+          <span>Solana DEX Telemetry</span>
+          <span class="badge-solami">SOLAMI</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Navigation Switcher -->
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" data-page="matrix">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+        <span>Flight Matrix</span>
+      </button>
+      <button class="nav-tab-btn" data-page="alerts">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Flight Alerts</span>
+        <span class="nav-badge-pill danger" id="navAlertBadge">0</span>
+      </button>
+      <button class="nav-tab-btn" data-page="feed">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Live Stream</span>
+      </button>
+      <button class="nav-tab-btn" data-page="health">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span>Node Health</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions & Telemetry -->
+    <div class="header-actions">
+      <!-- Live Engine Badge -->
+      <div class="status-badge" id="modeBadge">
+        <span class="status-dot-pulse"></span>
+        <span id="modeText">CONNECTING</span>
+      </div>
+
+      <!-- Current Slot Tracker -->
+      <div class="slot-counter" title="Current Mainnet Slot">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sol-green)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>SLOT: <strong id="slotVal">—</strong></span>
+      </div>
+
+      <!-- Audio Alert Bell Toggle -->
+      <button class="icon-btn" id="audioToggle" title="Toggle audio alert chime">
+        <svg id="audioIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+
+      <!-- Mobile Hamburger Button -->
+      <button class="icon-btn mobile-menu-toggle" id="drawerToggle" title="Open navigation drawer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Backdrop & Drawer Panel -->
+  <div class="mobile-drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="mobile-drawer" id="mobileDrawer">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+      <div style="font-weight: 700; font-size: 14px;">Navigation & Views</div>
+      <button class="icon-btn" id="drawerClose"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <button class="nav-tab-btn active" style="width: 100%; justify-content: flex-start; padding: 10px 14px;" data-page="matrix">🎯 Flight Matrix</button>
+      <button class="nav-tab-btn" style="width: 100%; justify-content: flex-start; padding: 10px 14px;" data-page="alerts">🚨 Flight Alerts</button>
+      <button class="nav-tab-btn" style="width: 100%; justify-content: flex-start; padding: 10px 14px;" data-page="feed">⚡ Live DEX Stream</button>
+      <button class="nav-tab-btn" style="width: 100%; justify-content: flex-start; padding: 10px 14px;" data-page="health">📡 Solami Node Health</button>
+    </div>
+
+    <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-subtle); font-size: 11px; color: var(--text-muted);">
+      <div>Solana Liquidity Flight Radar v1.4</div>
+      <div style="margin-top: 4px;">Powered by Solami Intelligence API</div>
+    </div>
+  </aside>
+
+  <!-- Workspace Area -->
+  <main class="workspace">
+
+    <!-- KPI Metric Ribbon -->
+    <section class="metrics-ribbon">
+      <!-- Tracked Assets -->
+      <div class="metric-tile purple-accent">
+        <div class="metric-header">
+          <span class="metric-label">Tracked Tokens</span>
+          <div class="metric-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+        </div>
+        <div class="metric-value" id="kpiTracked">0</div>
+        <div class="metric-footer">
+          <span class="metric-trend trend-neutral" id="kpiWindow">5m sliding window</span>
+        </div>
+      </div>
+
+      <!-- 1h DEX Volume -->
+      <div class="metric-tile cyan-accent">
+        <div class="metric-header">
+          <span class="metric-label">1h DEX Volume</span>
+          <div class="metric-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+          </div>
+        </div>
+        <div class="metric-value" id="kpiVolume">$0</div>
+        <div class="metric-footer">
+          <span>Trades: <strong id="kpiTrades" class="mono-val">0</strong></span>
+        </div>
+      </div>
+
+      <!-- Liquidity Drain (Removed) -->
+      <div class="metric-tile red-accent">
+        <div class="metric-header">
+          <span class="metric-label">1h LP Removed</span>
+          <div class="metric-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
+          </div>
+        </div>
+        <div class="metric-value val-neg" id="kpiLiqRemoved">$0</div>
+        <div class="metric-footer">
+          <span>24h Drain: <strong id="kpiLiqRemoved24" class="mono-val">$0</strong></span>
+        </div>
+      </div>
+
+      <!-- Liquidity Added -->
+      <div class="metric-tile green-accent">
+        <div class="metric-header">
+          <span class="metric-label">1h LP Injected</span>
+          <div class="metric-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sol-green)" stroke-width="2"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+          </div>
+        </div>
+        <div class="metric-value val-pos" id="kpiLiqAdded">$0</div>
+        <div class="metric-footer">
+          <span>24h Total: <strong id="kpiLiqAdded24" class="mono-val">$0</strong></span>
+        </div>
+      </div>
+
+      <!-- Cross-chain Bridge Telemetry -->
+      <div class="metric-tile">
+        <div class="metric-header">
+          <span class="metric-label">Cross-Chain Bridge</span>
+          <div class="metric-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </div>
+        </div>
+        <div class="metric-value" id="kpiBridgeDir">↔️ NEUTRAL</div>
+        <div class="metric-footer">
+          <span id="kpiBridgeRate">0 tx/min (DefiLlama)</span>
+        </div>
+      </div>
+
+      <!-- Active Pools / Launches -->
+      <div class="metric-tile">
+        <div class="metric-header">
+          <span class="metric-label">New Pools & Launches</span>
+          <div class="metric-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+        </div>
+        <div class="metric-value" id="kpiPools">0</div>
+        <div class="metric-footer">
+          <span>Launches: <strong id="kpiLaunches" class="mono-val">0</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page View 1: Main Flight Matrix -->
+    <div class="view-tab-content active" id="view-matrix">
+      <div class="cockpit-layout">
+        
+        <!-- Left Table Cockpit -->
+        <div class="cockpit-main">
+          <div class="card-container">
+            <!-- Filter & Search Toolbar -->
+            <div class="toolbar">
+              <!-- Search Box -->
+              <div class="search-box-wrap">
+                <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="search-input" id="tokenSearchInput" placeholder="Search by token symbol or mint address…">
+              </div>
+
+              <!-- Quick Level Filter Chips -->
+              <div class="filter-group">
+                <button class="filter-pill-btn active" data-filter="all">All Tokens</button>
+                <button class="filter-pill-btn critical-filter" data-filter="critical">🚨 Critical (≥75)</button>
+                <button class="filter-pill-btn" data-filter="high">⚠️ High Risk (≥50)</button>
+                <button class="filter-pill-btn" data-filter="elevated">⚡ Elevated (≥25)</button>
+                <button class="filter-pill-btn drain-filter" data-flow="outflow">🌊 Outflows</button>
+                <button class="filter-pill-btn" data-flow="rotation">🔄 Rotations</button>
+                <button class="filter-pill-btn inflow-filter" data-flow="inflow">📥 Inflows</button>
+              </div>
+
+              <!-- Filter Meta Info & Panel Toggle -->
+              <div class="toolbar-meta">
+                <span id="filteredCountLabel">Showing 0 assets</span>
+                <button class="filter-pill-btn sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle live alert feed sidebar panel">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                  <span>Activity Feed</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Token Matrix Table -->
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Token Asset</th>
+                    <th style="min-width: 140px;">Flight Score</th>
+                    <th>Flow Vector</th>
+                    <th class="text-right">Sell Pressure</th>
+                    <th class="text-right">Net Liquidity</th>
+                    <th class="text-right">LP Δ %</th>
+                    <th class="text-right">Window Vol</th>
+                    <th class="text-right">Wallets</th>
+                    <th class="text-right">Top-3 Whale %</th>
+                  </tr>
+                </thead>
+                <tbody id="tokenTableBody">
+                  <tr>
+                    <td colspan="9">
+                      <div class="empty-state-box">
+                        <div class="empty-state-icon">📡</div>
+                        <div>Waiting for live Solana liquidity events…</div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Quick Activity Panel (Alerts & Stream) -->
+        <aside class="cockpit-sidebar">
+          <div class="card-container">
+            <div class="panel-segmented-header">
+              <div class="panel-tabs">
+                <button class="panel-tab-btn active" id="sideTabAlertsBtn">
+                  <span>🚨 Alerts</span>
+                  <span class="nav-badge-pill danger" id="sideAlertCount">0</span>
+                </button>
+                <button class="panel-tab-btn" id="sideTabFeedBtn">
+                  <span>⚡ Live Feed</span>
+                </button>
+              </div>
+              <span style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);">REALTIME</span>
+            </div>
+
+            <!-- Active Alerts Container -->
+            <div class="panel-content-scroll" id="sideAlertsPanel">
+              <div class="empty-state-box">
+                <div class="empty-state-icon">🛡️</div>
+                <div>No active flight risk alerts</div>
+              </div>
+            </div>
+
+            <!-- Live Feed Container (Hidden by default in sidebar) -->
+            <div class="panel-content-scroll" id="sideFeedPanel" style="display: none;">
+              <div class="empty-state-box">
+                <div class="empty-state-icon">⚡</div>
+                <div>Waiting for DEX stream…</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+
+    <!-- Page View 2: Full Dedicated Flight Alerts Center -->
+    <div class="view-tab-content" id="view-alerts">
+      <div class="card-container">
+        <div class="toolbar">
+          <div style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Flight Risk Alert Center</span>
+          </div>
+          <div class="filter-group">
+            <button class="filter-pill-btn active" data-alert-filter="all">All Alerts</button>
+            <button class="filter-pill-btn critical-filter" data-alert-filter="critical">Critical</button>
+            <button class="filter-pill-btn" data-alert-filter="high">High</button>
+            <button class="filter-pill-btn" data-alert-filter="medium">Medium</button>
+          </div>
+          <div class="toolbar-meta" id="alertTotalLabel">Total: 0</div>
+        </div>
+
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;" id="fullAlertsContainer">
+          <div class="empty-state-box">
+            <div class="empty-state-icon">🛡️</div>
+            <div>No flight alerts generated yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page View 3: Live DEX Stream -->
+    <div class="view-tab-content" id="view-feed">
+      <div class="card-container">
+        <div class="toolbar">
+          <div style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sol-green)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>Real-time Solana DEX Event Stream</span>
+          </div>
+          <div class="toolbar-meta">Trades, LP Injections, Pools & Launches</div>
+        </div>
+
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px; max-height: 800px; overflow-y: auto;" id="fullFeedContainer">
+          <div class="empty-state-box">
+            <div class="empty-state-icon">⚡</div>
+            <div>Connecting to Solami event stream…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page View 4: Solami Node & Stream Health -->
+    <div class="view-tab-content" id="view-health">
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        
+        <!-- Node Grid -->
+        <div class="card-container">
+          <div class="toolbar">
+            <div style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sol-cyan)" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>Solami Streaming Infrastructure Health</span>
+            </div>
+            <div class="toolbar-meta">Yellowstone gRPC · Blur WebSocket · Mirage · RPC</div>
+          </div>
+          <div class="health-cockpit-grid" id="healthCockpitGrid"></div>
+        </div>
+
+        <!-- Program Activity Distribution -->
+        <div class="card-container">
+          <div class="toolbar">
+            <div style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sol-purple)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              <span>On-Chain Program Activity Breakdown</span>
+            </div>
+            <div class="toolbar-meta">Events per minute</div>
+          </div>
+          <div class="program-activity-box" id="programBarsBox"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Institutional Footer -->
+  <footer class="app-footer">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>Liquidity Flight Radar (LFR)</span>
+      <span>·</span>
+      <span>Solami Telemetry Engine</span>
+      <span>·</span>
+      <span id="footerConnectionInfo">Disconnected</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://solscan.io" target="_blank" rel="noreferrer" class="footer-link">Solscan</a>
+      <a href="https://dexscreener.com/solana" target="_blank" rel="noreferrer" class="footer-link">DexScreener</a>
+      <a href="https://birdeye.so" target="_blank" rel="noreferrer" class="footer-link">Birdeye</a>
+      <a href="/api/state" target="_blank" class="footer-link">Raw State API</a>
+    </div>
+  </footer>
+
+</div>
+
+<!-- Sound synthesis for alerts -->
+<script>
+// Web Audio Context for crisp institutional pings
+let audioCtx = null;
+let audioEnabled = false;
+
+function playAlertPing() {
+  if (!audioEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.26);
+  } catch (err) {
+    console.error("Audio error", err);
+  }
+}
+
+// Audio Toggle
+const audioToggle = document.getElementById("audioToggle");
+audioToggle.addEventListener("click", () => {
+  audioEnabled = !audioEnabled;
+  audioToggle.style.color = audioEnabled ? "var(--sol-green)" : "var(--text-secondary)";
+  audioToggle.style.borderColor = audioEnabled ? "rgba(20, 241, 149, 0.4)" : "var(--border-subtle)";
+  if (audioEnabled) playAlertPing();
+});
+
+// Helper Utilities
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n) => { 
+  n = Number(n) || 0; 
+  const a = Math.abs(n); 
+  const s = n < 0 ? "-" : "";
+  return a >= 1e9 ? s + (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? s + (a / 1e6).toFixed(2) + "M" : a >= 1e3 ? s + (a / 1e3).toFixed(1) + "K" : s + a.toFixed(0); 
+};
+const short = (a) => a && a.length > 10 ? a.slice(0, 4) + "…" + a.slice(-4) : a || "";
+const ago = (t) => { 
+  if (!t) return "never"; 
+  const s = Math.round((Date.now() - t) / 1000); 
+  return s < 2 ? "now" : s < 90 ? s + "s" : Math.round(s / 60) + "m"; 
+};
+
+// Global App State
+let state = null;
+let expandedToken = null;
+let detailCache = {};
+let currentLevelFilter = "all";
+let currentFlowFilter = "all";
+let currentAlertFilter = "all";
+let tokenSearchQuery = "";
+let previousAlertCount = 0;
+
+// Navigation Routing between Tabs
+function setActivePage(page) {
+  document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.page === page);
+  });
+  document.querySelectorAll(".view-tab-content").forEach(view => {
+    view.classList.toggle("active", view.id === "view-" + page);
+  });
+  // Close drawer if open
+  closeDrawer();
+}
+
+document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (btn.dataset.page) setActivePage(btn.dataset.page);
+  });
+});
+
+// Drawer Navigation for Mobile
+const drawerToggle = $("drawerToggle");
+const drawerClose = $("drawerClose");
+const mobileDrawer = $("mobileDrawer");
+const drawerBackdrop = $("drawerBackdrop");
+
+function openDrawer() {
+  mobileDrawer.classList.add("open");
+  drawerBackdrop.classList.add("open");
+}
+function closeDrawer() {
+  mobileDrawer.classList.remove("open");
+  drawerBackdrop.classList.remove("open");
+}
+drawerToggle?.addEventListener("click", openDrawer);
+drawerClose?.addEventListener("click", closeDrawer);
+drawerBackdrop?.addEventListener("click", closeDrawer);
+
+// Sidebar Switcher (Alerts vs Feed)
+const sideTabAlertsBtn = $("sideTabAlertsBtn");
+const sideTabFeedBtn = $("sideTabFeedBtn");
+const sideAlertsPanel = $("sideAlertsPanel");
+const sideFeedPanel = $("sideFeedPanel");
+
+sideTabAlertsBtn.addEventListener("click", () => {
+  sideTabAlertsBtn.classList.add("active");
+  sideTabFeedBtn.classList.remove("active");
+  sideAlertsPanel.style.display = "flex";
+  sideFeedPanel.style.display = "none";
+});
+
+sideTabFeedBtn.addEventListener("click", () => {
+  sideTabFeedBtn.classList.add("active");
+  sideTabAlertsBtn.classList.remove("active");
+  sideAlertsPanel.style.display = "none";
+  sideFeedPanel.style.display = "flex";
+});
+
+// Quick Filters
+document.querySelectorAll(".filter-pill-btn[data-filter]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-pill-btn[data-filter]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentLevelFilter = btn.dataset.filter;
+    renderTokens();
+  });
+});
+
+document.querySelectorAll(".filter-pill-btn[data-flow]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (btn.classList.contains("active")) {
+      btn.classList.remove("active");
+      currentFlowFilter = "all";
+    } else {
+      document.querySelectorAll(".filter-pill-btn[data-flow]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFlowFilter = btn.dataset.flow;
+    }
+    renderTokens();
+  });
+});
+
+// Dedicated Alert Center Filters
+document.querySelectorAll(".filter-pill-btn[data-alert-filter]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-pill-btn[data-alert-filter]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentAlertFilter = btn.dataset.alertFilter;
+    if (state) renderFullAlerts(state.alerts);
+  });
+});
+
+// Search input
+$("tokenSearchInput").addEventListener("input", (e) => {
+  tokenSearchQuery = (e.target.value || "").trim().toLowerCase();
+  renderTokens();
+});
+
+// Sidebar Toggle Functionality (for laptop and desktop)
+let sidebarActive = window.innerWidth > 1440;
+function toggleSidebar() {
+  sidebarActive = !sidebarActive;
+  const layout = document.querySelector(".cockpit-layout");
+  if (layout) {
+    if (window.innerWidth <= 1440) {
+      layout.classList.toggle("sidebar-active", sidebarActive);
+    } else {
+      layout.classList.toggle("sidebar-collapsed", !sidebarActive);
+    }
+  }
+  const btn = $("sidebarToggleBtn");
+  if (btn) {
+    btn.classList.toggle("active", sidebarActive);
+  }
+}
+
+// Token metadata formatter helper
+function getTokenDisplay(t) {
+  let symbol = (t.symbol || "").trim();
+  let name = (t.name || "").trim();
+  
+  // Clean up symbol if it looks like an unformatted hash or placeholder
+  const isHash = symbol.length > 25 || symbol.includes("…") || symbol.includes("...");
+  if (!symbol || isHash) {
+    if (name) {
+      symbol = name.length > 10 ? name.slice(0, 8) + "…" : name;
+    } else {
+      symbol = short(t.token);
+    }
+  }
+
+  // Get readable avatar fallback character
+  const cleanChar = symbol.replace(/[^a-zA-Z0-9]/g, "")[0] || "S";
+  const initial = cleanChar.toUpperCase();
+
+  return {
+    symbol,
+    name: name && name !== symbol ? name : "",
+    initial,
+    image: t.image || null,
+  };
+}
+
+// Main Ingestion & Rendering
+function render(s) {
+  state = s;
+
+  // Mode badge
+  const isSimulated = s.mode === "simulate";
+  $("modeBadge").className = `status-badge ${isSimulated ? "sim" : "live"}`;
+  $("modeText").textContent = isSimulated ? "SIMULATED" : "MAINNET LIVE";
+  $("simBanner").classList.toggle("show", isSimulated);
+
+  // Slot
+  if (s.metrics.slot) {
+    $("slotVal").textContent = s.metrics.slot.toLocaleString();
+  }
+
+  // Footer connection
+  $("footerConnectionInfo").textContent = `${s.sources.length} sources active (${s.sources.join(", ") || "none"})`;
+
+  // Bridge metrics
+  const b = s.bridge;
+  if (b) {
+    const icon = b.direction === "outflow" ? "📤 OUTFLOW" : b.direction === "inflow" ? "📥 INFLOW" : "↔️ NEUTRAL";
+    $("kpiBridgeDir").textContent = icon;
+    $("kpiBridgeRate").textContent = b.direction !== "neutral" 
+      ? `$${fmt(Math.abs(b.netUsd))}/day · ${b.liveBridgeTxPerMin} tx/min` 
+      : `${b.liveBridgeTxPerMin} tx/min (DefiLlama)`;
+  }
+
+  // KPIs
+  const m = s.metrics;
+  const h1 = m.last1h;
+  const h24 = m.last24h;
+
+  $("kpiTracked").textContent = m.trackedTokens;
+  $("kpiVolume").textContent = `$${fmt(h1.volumeUsd)}`;
+  $("kpiTrades").textContent = fmt(h1.trades);
+  
+  $("kpiLiqRemoved").textContent = `-$${fmt(h1.liqRemoved)}`;
+  $("kpiLiqRemoved24").textContent = `-$${fmt(h24.liqRemoved)}`;
+  
+  $("kpiLiqAdded").textContent = `+$${fmt(h1.liqAdded)}`;
+  $("kpiLiqAdded24").textContent = `+$${fmt(h24.liqAdded)}`;
+
+  $("kpiPools").textContent = h1.pools;
+  $("kpiLaunches").textContent = h1.launches;
+
+  if (s.tokens[0]) {
+    $("kpiWindow").textContent = `${Math.round(s.tokens[0].windowSec / 60)}m sliding window`;
+  }
+
+  // Alerts badge & audio chime
+  const totalAlerts = s.alerts ? s.alerts.length : 0;
+  $("navAlertBadge").textContent = totalAlerts;
+  $("sideAlertCount").textContent = totalAlerts;
+  if (totalAlerts > previousAlertCount && previousAlertCount > 0) {
+    playAlertPing();
+  }
+  previousAlertCount = totalAlerts;
+
+  // Render Sub-Views
+  renderTokens();
+  renderAlerts(s.alerts);
+  renderFeed(s.events);
+  renderHealth(s);
+}
+
+// Render Flight Matrix Table
+function renderTokens() {
+  if (!state) return;
+
+  let tokens = state.tokens || [];
+
+  // Filter by search query across symbol, name, and mint address
+  if (tokenSearchQuery) {
+    tokens = tokens.filter(t => 
+      (t.symbol && t.symbol.toLowerCase().includes(tokenSearchQuery)) ||
+      (t.name && t.name.toLowerCase().includes(tokenSearchQuery)) ||
+      (t.token && t.token.toLowerCase().includes(tokenSearchQuery))
+    );
+  }
+
+  // Filter by risk level
+  if (currentLevelFilter !== "all") {
+    tokens = tokens.filter(t => t.level === currentLevelFilter);
+  }
+
+  // Filter by flow direction
+  if (currentFlowFilter !== "all") {
+    tokens = tokens.filter(t => t.flow === currentFlowFilter);
+  }
+
+  $("filteredCountLabel").textContent = `Showing ${tokens.length} of ${state.tokens.length} assets`;
+
+  if (tokens.length === 0) {
+    $("tokenTableBody").innerHTML = `
+      <tr>
+        <td colspan="9">
+          <div class="empty-state-box">
+            <div class="empty-state-icon">🔍</div>
+            <div>No assets match your search and filter criteria</div>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const rows = [];
+  tokens.forEach(t => {
+    const m = t.metrics;
+    const isExpanded = expandedToken === t.token;
+    const isHighRisk = t.level === "critical" || t.level === "high";
+    const info = getTokenDisplay(t);
+
+    const imgHtml = info.image 
+      ? `<img src="${esc(info.image)}" alt="" class="token-avatar-img" onerror="this.remove();" loading="lazy" />` 
+      : '';
+
+    rows.push(`
+      <tr class="token-row ${isExpanded ? 'expanded' : ''}" onclick="toggleTokenDetail('${esc(t.token)}')">
+        <td>
+          <div class="token-identity">
+            <div class="token-avatar ${isHighRisk ? 'high-risk' : ''}">
+              ${imgHtml}
+              <span class="token-avatar-fallback">${info.initial}</span>
+            </div>
+            <div class="token-name-wrap">
+              <div class="token-symbol-row">
+                <span>${esc(info.symbol)}</span>
+                ${t.pinned ? '<span title="Pinned Tracked Asset">⭐</span>' : ''}
+              </div>
+              <div class="token-sub-row">
+                ${info.name ? `<span class="token-full-name" title="${esc(info.name)}">${esc(info.name)}</span>` : ''}
+                <span class="token-mint-hash">${short(t.token)}</span>
+              </div>
+            </div>
+          </div>
+        </td>
+
+        <!-- Flight Score Gauge -->
+        <td>
+          <div class="score-gauge-wrap">
+            <div class="score-bar-track">
+              <div class="score-bar-fill ${t.level}" style="width: ${Math.min(100, Math.max(0, t.score))}%"></div>
+            </div>
+            <div class="score-pill-number ${t.level}">${t.score}</div>
+          </div>
+        </td>
+
+        <!-- Flow Vector -->
+        <td>
+          <span class="flow-badge ${t.flow}">
+            ${t.flow === 'outflow' ? '↓ OUTFLOW' : t.flow === 'inflow' ? '↑ INFLOW' : t.flow === 'rotation' ? '🔄 ROTATION' : '↔ NEUTRAL'}
+          </span>
+        </td>
+
+        <!-- Sell Pressure -->
+        <td class="text-right">
+          <span class="mono-val ${(m.sellPressure >= 0.7) ? 'val-neg' : ''}">
+            ${(m.sellPressure * 100).toFixed(0)}%
+          </span>
+        </td>
+
+        <!-- Net Liquidity -->
+        <td class="text-right">
+          <span class="${m.liquidityNetUsd < 0 ? 'val-neg' : 'val-pos'}">
+            ${m.liquidityNetUsd < 0 ? '-' : '+'}$${fmt(Math.abs(m.liquidityNetUsd))}
+          </span>
+        </td>
+
+        <!-- LP Change % -->
+        <td class="text-right">
+          <span class="mono-val ${m.liquidityChangePct < 0 ? 'val-neg' : ''}">
+            ${m.liquidityChangePct != null ? (m.liquidityChangePct > 0 ? '+' : '') + m.liquidityChangePct.toFixed(0) + '%' : '–'}
+          </span>
+        </td>
+
+        <!-- Window Volume -->
+        <td class="text-right">
+          <span class="mono-val">$${fmt(m.volumeUsd)}</span>
+        </td>
+
+        <!-- Unique Wallets -->
+        <td class="text-right">
+          <span class="mono-val">${m.uniqueWallets}</span>
+        </td>
+
+        <!-- Top 3 Concentration -->
+        <td class="text-right">
+          <span class="mono-val ${(m.top3Share >= 0.6) ? 'val-neg' : ''}">
+            ${(m.top3Share * 100).toFixed(0)}%
+          </span>
+        </td>
+      </tr>
+    `);
+
+    // Expansion Drawer Row
+    if (isExpanded) {
+      rows.push(renderTokenDrawer(t));
+    }
+  });
+
+  $("tokenTableBody").innerHTML = rows.join("");
+}
+
+// Token Detailed Drawer Component
+function renderTokenDrawer(t) {
+  const m = t.metrics;
+  const d = detailCache[t.token];
+  const holderText = d === undefined 
+    ? "Querying Solami RPC..." 
+    : d 
+    ? `Top-10 Share: ${(d.top10Share * 100).toFixed(1)}% · Top-1 Share: ${(d.top1Share * 100).toFixed(1)}%` 
+    : "Holder concentration telemetry unavailable";
+
+  return `
+    <tr class="detail-expansion-row">
+      <td colspan="9">
+        <div class="detail-card-expansion">
+          <!-- Signal Vectors -->
+          <div class="detail-box">
+            <div class="detail-box-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sol-purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Flight Signals & Triggers</span>
+            </div>
+            <ul class="signals-list">
+              ${(t.signals && t.signals.length) 
+                ? t.signals.map(s => `
+                    <li class="signal-item">
+                      <span class="signal-pts-badge">+${s.points}</span>
+                      <div><strong>${esc(s.label)}:</strong> ${esc(s.detail)}</div>
+                    </li>
+                  `).join('') 
+                : '<li class="signal-item" style="color: var(--text-muted);">No elevated risk vectors detected</li>'}
+            </ul>
+          </div>
+
+          <!-- Recommended Execution Actions -->
+          <div class="detail-box">
+            <div class="detail-box-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Action Matrix & Intelligence</span>
+            </div>
+            <ul class="actions-list">
+              ${(t.actions && t.actions.length)
+                ? t.actions.map(a => `<li class="action-badge-item">💡 ${esc(a)}</li>`).join('')
+                : '<li class="action-badge-item" style="color: var(--text-muted);">Asset metrics within normal bounds</li>'}
+            </ul>
+            <div style="margin-top: 6px; font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono);">
+              ${esc(holderText)}
+            </div>
+          </div>
+
+          <!-- Deep Telemetry & Direct Links -->
+          <div class="detail-box">
+            <div class="detail-box-title">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sol-green)" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              <span>DEX Terminals & Explorers</span>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-secondary); line-height: 1.6;">
+              <div>Price: <strong>${m.priceUsd != null ? '$' + m.priceUsd.toPrecision(4) : '–'}</strong></div>
+              <div>Buy Vol: <strong>$${fmt(m.buyUsd)}</strong> / Sell: <strong>$${fmt(m.sellUsd)}</strong></div>
+              <div>LP Added: <strong>$${fmt(m.liquidityAddedUsd)}</strong> / Removed: <strong>$${fmt(m.liquidityRemovedUsd)}</strong></div>
+            </div>
+
+            <div class="quick-links-group">
+              <a href="https://solscan.io/token/${encodeURIComponent(t.token)}" target="_blank" rel="noreferrer" class="ext-link-btn">Solscan ↗</a>
+              <a href="https://dexscreener.com/solana/${encodeURIComponent(t.token)}" target="_blank" rel="noreferrer" class="ext-link-btn">DexScreener ↗</a>
+              <a href="https://birdeye.so/token/${encodeURIComponent(t.token)}?chain=solana" target="_blank" rel="noreferrer" class="ext-link-btn">Birdeye ↗</a>
+              <button onclick="navigator.clipboard.writeText('${esc(t.token)}'); alert('Mint copied to clipboard!');" class="ext-link-btn" style="cursor: pointer;">Copy Mint 📋</button>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+// Toggle expansion drawer
+async function toggleTokenDetail(mint) {
+  expandedToken = expandedToken === mint ? null : mint;
+  renderTokens();
+
+  if (expandedToken && detailCache[expandedToken] === undefined) {
+    try {
+      const res = await fetch("/api/token/" + encodeURIComponent(expandedToken));
+      const json = await res.json();
+      detailCache[expandedToken] = json.holders ?? null;
+    } catch {
+      detailCache[expandedToken] = null;
+    }
+    renderTokens();
+  }
+}
+
+// Render Alerts in Sidebar and Full Alerts Page
+function renderAlerts(alerts) {
+  alerts = alerts || [];
+
+  // Sidebar alerts list
+  if (alerts.length === 0) {
+    $("sideAlertsPanel").innerHTML = `
+      <div class="empty-state-box">
+        <div class="empty-state-icon">🛡️</div>
+        <div>No active flight risk alerts</div>
+      </div>
+    `;
+  } else {
+    $("sideAlertsPanel").innerHTML = alerts.slice(0, 25).map(a => `
+      <div class="alert-card ${a.severity}">
+        <div class="alert-head">
+          <span class="alert-title">${esc(a.title)}</span>
+          <span class="alert-time">${new Date(a.ts).toLocaleTimeString()}</span>
+        </div>
+        <div class="alert-body-stats">
+          <span>Flight: <strong class="${a.severity === 'critical' ? 'val-neg' : ''}">${a.score}</strong></span>
+          <span>·</span>
+          <span>Sell: ${(a.sellPressure * 100).toFixed(0)}%</span>
+          <span>·</span>
+          <span>Top-3: ${(a.top3Share * 100).toFixed(0)}%</span>
+        </div>
+        <div class="alert-action-hint">
+          💡 ${esc(a.actions.join(', '))}
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // Render Full Page Alerts
+  renderFullAlerts(alerts);
+}
+
+function renderFullAlerts(alerts) {
+  let filtered = alerts || [];
+  if (currentAlertFilter !== "all") {
+    filtered = filtered.filter(a => a.severity === currentAlertFilter);
+  }
+
+  $("alertTotalLabel").textContent = `Showing ${filtered.length} of ${alerts.length} alerts`;
+
+  if (filtered.length === 0) {
+    $("fullAlertsContainer").innerHTML = `
+      <div class="empty-state-box">
+        <div class="empty-state-icon">🛡️</div>
+        <div>No alerts matching the selected severity level</div>
+      </div>
+    `;
+    return;
+  }
+
+  $("fullAlertsContainer").innerHTML = filtered.map(a => `
+    <div class="alert-card ${a.severity}" style="padding: 14px 16px;">
+      <div class="alert-head">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="flow-badge ${a.severity === 'critical' ? 'outflow' : 'neutral'}">${a.severity.toUpperCase()}</span>
+          <span class="alert-title" style="font-size: 13px;">${esc(a.title)}</span>
+        </div>
+        <span class="alert-time" style="font-size: 11px;">${new Date(a.ts).toLocaleTimeString()} · ${new Date(a.ts).toLocaleDateString()}</span>
+      </div>
+      <div class="alert-body-stats" style="margin-top: 4px; font-size: 12px;">
+        <span>Flight Score: <strong>${a.score}</strong></span>
+        <span>·</span>
+        <span>Sell Pressure: <strong>${(a.sellPressure * 100).toFixed(0)}%</strong></span>
+        <span>·</span>
+        <span>Whale Concentration (Top-3): <strong>${(a.top3Share * 100).toFixed(0)}%</strong></span>
+        <span>·</span>
+        <span>Bridge Vector: <strong>${esc(a.bridge)}</strong></span>
+      </div>
+      <div class="alert-action-hint" style="font-size: 11.5px; margin-top: 6px;">
+        <strong>Recommended Protocol:</strong> ${esc(a.actions.join(' · '))}
+      </div>
+    </div>
+  `).join("");
+}
+
+// Render Feed in Sidebar and Full Stream Page
+function renderFeed(events) {
+  events = events || [];
+
+  const renderItem = (e) => {
+    const isTrade = e.kind === "trade";
+    const isLiq = e.kind === "liquidity";
+    const label = isTrade ? e.side : isLiq ? e.action : e.kind;
+    const usd = e.usd != null ? `$${fmt(e.usd)}` : '';
+
+    return `
+      <div class="feed-card">
+        <div class="feed-left">
+          <span class="feed-pill ${label}">${label}</span>
+          <div style="display: flex; flex-direction: column;">
+            <span class="feed-token-name">${esc(e.symbol || short(e.token))}</span>
+            <span style="font-size: 10px; color: var(--text-muted); font-family: var(--font-mono);">${esc(short(e.wallet || e.creator || ''))}</span>
+          </div>
+        </div>
+        <div class="feed-right">
+          <span class="feed-usd ${label === 'sell' || label === 'remove' ? 'val-neg' : 'val-pos'}">${usd}</span>
+          <span class="feed-time">${new Date(e.ts).toLocaleTimeString()}</span>
+        </div>
+      </div>
+    `;
+  };
+
+  if (events.length === 0) {
+    $("sideFeedPanel").innerHTML = '<div class="empty-state-box"><div class="empty-state-icon">⚡</div><div>Waiting for DEX events…</div></div>';
+    $("fullFeedContainer").innerHTML = '<div class="empty-state-box"><div class="empty-state-icon">⚡</div><div>Waiting for DEX stream…</div></div>';
+    return;
+  }
+
+  $("sideFeedPanel").innerHTML = events.slice(0, 30).map(renderItem).join("");
+  $("fullFeedContainer").innerHTML = events.slice(0, 60).map(renderItem).join("");
+}
+
+// Render Health and Node Telemetry
+function renderHealth(s) {
+  const healthList = s.health || [];
+
+  $("healthCockpitGrid").innerHTML = healthList.map(h => `
+    <div class="health-node-card">
+      <div class="health-node-top">
+        <span class="health-node-name">${esc(h.name)}</span>
+        <span class="health-state-badge ${h.state}">${h.state.toUpperCase()}</span>
+      </div>
+      <div class="health-telemetry-metrics">
+        <div class="health-metric-col">
+          <span>Processed</span>
+          <strong>${fmt(h.events)} ev</strong>
+        </div>
+        <div class="health-metric-col">
+          <span>Throughput</span>
+          <strong>${h.eventsPerSec}/sec</strong>
+        </div>
+        <div class="health-metric-col">
+          <span>Reconnects</span>
+          <strong>${h.reconnects}</strong>
+        </div>
+        <div class="health-metric-col">
+          <span>Last Frame</span>
+          <strong>${ago(h.lastEventAt)}</strong>
+        </div>
+      </div>
+      <div class="health-node-detail-txt">
+        ${esc(h.lastError && h.state === 'error' ? h.lastError : h.detail || 'Nominal streaming state')}
+      </div>
+    </div>
+  `).join("");
+
+  // Program Activity Bars
+  const programs = s.metrics.programs ? s.metrics.programs.slice(0, 8) : [];
+  const maxPerMin = Math.max(1, ...programs.map(p => p.perMin));
+
+  $("programBarsBox").innerHTML = programs.map(p => `
+    <div class="prog-bar-row">
+      <div class="prog-name">${esc(p.label)}</div>
+      <div class="prog-track">
+        <div class="prog-fill" style="width: ${(p.perMin / maxPerMin) * 100}%"></div>
+      </div>
+      <div class="prog-val">${p.perMin}/min</div>
+    </div>
+  `).join("");
+}
+
+// WebSocket Connection Lifecycle
+function initLiveSocket() {
+  const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+  const ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    $("modeBadge").className = "status-badge live";
+    $("modeText").textContent = "CONNECTED";
+  };
+
+  ws.onclose = () => {
+    $("modeBadge").className = "status-badge";
+    $("modeText").textContent = "RECONNECTING";
+    setTimeout(initLiveSocket, 2000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+
+  ws.onmessage = (msg) => {
+    try {
+      const parsed = JSON.parse(msg.data);
+      if (parsed.type === "snapshot") {
+        render(parsed.data);
+      } else if (parsed.type === "alert") {
+        playAlertPing();
+      }
+    } catch (err) {
+      console.error("Frame parse error", err);
+    }
+  };
+}
+
+// Initial Boot: fetch immediate state snapshot + connect live WebSocket
+fetch("/api/state")
+  .then((res) => res.json())
+  .then((data) => render(data))
+  .catch((err) => console.error("Initial state prefetch error", err));
+
+initLiveSocket();
+</script>
+
+</body>
+</html>

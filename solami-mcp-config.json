@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "solami": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch",
+        "https://api.solami.dev/mcp"
+      ],
+      "env": {
+        "SOLAMI_API_KEY": "sk_W76gdVXTjRP_iBTjAe67pCUh5RwbRko3kaivLw8M8QM"
+      },
+      "disabled": false
+    }
+  }
+}
