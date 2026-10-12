@@ -4,7 +4,12 @@ Institutional-grade, real-time liquidity-flight intelligence for Solana, built o
 
 > **Built for the Superteam Earn Bounty:** *"Build something live on Solana data (Solami)"*
 
-- **Demo Video (2–3 min):** `TODO: Add your Loom or YouTube video link`
+## Demo
+
+[![Flight Radar Demo](https://img.youtube.com/vi/hgsjMPrYwXE/maxresdefault.jpg)](https://youtu.be/hgsjMPrYwXE?si=0J26nzu9Oumaw902)
+
+> ▶️ **[Watch on YouTube](https://youtu.be/hgsjMPrYwXE?si=0J26nzu9Oumaw902)** — Live demo running on Solana mainnet
+
 - **Execution:** Runs locally against live Solana mainnet via `npm start` (see [Quick Start](#quick-start))
 
 ---
