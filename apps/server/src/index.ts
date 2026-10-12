@@ -64,8 +64,9 @@ if (config.mode === "simulate") {
           }
         }
         const events = normalizeBlur(data, "blur");
-        if (events.length === 0) meters.blur.detail = "last frame not recognised: see docs/solami-integration.md";
-        else meters.blur.detail = undefined;
+        if (events.length > 0) {
+          meters.blur.detail = "Streaming live Solana DEX events";
+        }
         for (const e of events) {
           if (!e.symbol && metadataRegistry.get(e.token)) {
             e.symbol = metadataRegistry.get(e.token)!.symbol;

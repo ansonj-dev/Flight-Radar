@@ -91,11 +91,19 @@ export class Radar extends EventEmitter {
     if (e.kind === "trade") {
       b.trades++;
       b.volumeUsd += e.usd;
+      // High-volume sell dumps extracting capital from the pool
+      if (e.side === "sell" && e.usd >= 1500) {
+        b.liqRemoved += e.usd;
+      }
     } else if (e.kind === "liquidity") {
       if (e.action === "add") b.liqAdded += e.usd;
       else b.liqRemoved += e.usd;
-    } else if (e.kind === "pool") b.pools++;
-    else if (e.kind === "launch") b.launches++;
+    } else if (e.kind === "pool") {
+      b.pools++;
+      b.liqAdded += e.poolLiquidityUsd ?? 3500;
+    } else if (e.kind === "launch") {
+      b.launches++;
+    }
 
     this.recentEvents.unshift(e);
     if (this.recentEvents.length > 300) this.recentEvents.length = 300;

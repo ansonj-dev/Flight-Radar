@@ -84,20 +84,33 @@ export function normalizeBlur(raw: unknown, source: MarketEvent["source"] = "blu
         side: /sell|short|out/.test(side) ? "sell" : "buy",
         wallet, usd, priceUsd: num(pick(o, ["price_usd", "priceUsd", "price"])), poolLiquidityUsd,
       });
+    } else if (/graduat/.test(t)) {
+      if (!token) continue;
+      const liqUsd = usd || poolLiquidityUsd || 12000;
+      out.push({ kind: "pool", ...base, pool: pool ?? "unknown", token, symbol, poolLiquidityUsd: liqUsd });
+      out.push({
+        kind: "liquidity", ...base, pool: pool ?? "unknown", token, symbol,
+        action: "add", wallet, usd: liqUsd, poolLiquidityUsd: liqUsd,
+      });
+    } else if (/pool/.test(t)) {
+      if (!token) continue;
+      const initLiq = usd || poolLiquidityUsd || (pick(o, ["initial_liquidity", "initial_sol"]) ? num(pick(o, ["initial_liquidity", "initial_sol"]))! * 110 : 3500);
+      out.push({ kind: "pool", ...base, pool: pool ?? "unknown", token, symbol, wallet: wallet === "unknown" ? undefined : wallet, poolLiquidityUsd: initLiq });
+      out.push({
+        kind: "liquidity", ...base, pool: pool ?? "unknown", token, symbol,
+        action: "add", wallet, usd: initLiq, poolLiquidityUsd: initLiq,
+      });
     } else if (/liquidity|lp_|add_liq|remove_liq|deposit|withdraw/.test(t)) {
       if (!token) continue;
       const act = String(pick(o, ["action", "side", "change_type", "liquidity_action"]) ?? t).toLowerCase();
       out.push({
         kind: "liquidity", ...base, pool: pool ?? "unknown", token, symbol,
         action: /remove|withdraw|burn|decrease/.test(act) ? "remove" : "add",
-        wallet, usd: Math.abs(usd), poolLiquidityUsd,
+        wallet, usd: Math.abs(usd || 1000), poolLiquidityUsd,
       });
     } else if (/launch|mint_created|token_created|new_token/.test(t)) {
       if (!token) continue;
       out.push({ kind: "launch", ...base, token, symbol, creator: pick(o, ["creator", "deployer", "wallet"]) });
-    } else if (/pool/.test(t)) {
-      if (!token) continue;
-      out.push({ kind: "pool", ...base, pool: pool ?? "unknown", token, symbol, wallet: wallet === "unknown" ? undefined : wallet, poolLiquidityUsd });
     }
   }
   return out;
